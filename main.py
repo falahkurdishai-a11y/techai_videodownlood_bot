@@ -19,7 +19,7 @@ def check_sub(user_id):
 def start(message):
     user_id = message.from_user.id
     if check_sub(user_id):
-        bot.send_message(message.chat.id, "سڵاو كاك فەلاح! 🤖\nهەمی کێشەیێن یوتوب هاتنە چارەسەرکرن.\nتکایە لینکا ڤیدیۆیێ بفرێکه (TikTok, Insta, FB, YouTube).")
+        bot.send_message(message.chat.id, "سڵاو كاك فەلاح! 🤖\nبۆتێ تە نوکە ئامادەیە بۆ دانلۆدکرن ژ:\n(TikTok, Instagram, Facebook, YouTube)")
     else:
         markup = types.InlineKeyboardMarkup()
         markup.add(types.InlineKeyboardButton("Join Channel", url=CHANNEL_URL))
@@ -33,9 +33,10 @@ def handle_download(message):
         return
     url = message.text
     if not url.startswith("http"): return
-    msg = bot.reply_to(message, "⏳ Tech AI خەریکی دانلۆدکردنە...\nخەریکە بەربەستەکانی یوتوب تێک دەشکێنین.")
     
-    # ڕێکخستنێن پیشەیی بۆ تێپەڕاندنی بلۆکا یوتوب
+    msg = bot.reply_to(message, "⏳ Tech AI خەریکی دانلۆدکردنە...")
+    
+    # ڕێکخستنێن گشتی بۆ هەمی سایتان
     ydl_opts = {
         'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
         'outtmpl': f'vid_{int(time.time())}.%(ext)s',
@@ -43,15 +44,15 @@ def handle_download(message):
         'no_warnings': True,
         'nocheckcertificate': True,
         'merge_output_format': 'mp4',
-        'add_header': [
-            'Accept-Language: en-US,en;q=0.9',
-            'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
-        ],
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Connection': 'keep-alive',
+        },
         'extractor_args': {
-            'youtube': {
-                'player_client': ['android', 'web'],
-                'skip': ['dash', 'hls']
-            }
+            'youtube': {'player_client': ['android', 'web'], 'skip': ['dash', 'hls']},
+            'instagram': {'check_headers': True}
         }
     }
 
@@ -59,16 +60,23 @@ def handle_download(message):
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
             filename = ydl.prepare_filename(info)
-            if not os.path.exists(filename): # هندەک جاران ناڤێ فایلی دهێتە گۆهۆڕین بۆ .mkv
-                filename = filename.rsplit('.', 1)[0] + '.mp4'
+            # دڵنیابوون ژ ناڤێ فایلی
+            if not os.path.exists(filename):
+                base, ext = os.path.splitext(filename)
+                for possible_ext in ['.mp4', '.mkv', '.webm']:
+                    if os.path.exists(base + possible_ext):
+                        filename = base + possible_ext
+                        break
 
         with open(filename, 'rb') as video:
             bot.send_video(message.chat.id, video, caption="ڤیدیۆیا تە ئامادەیە ✅\nب ڕێکا: @tech_ai_falah")
+        
         os.remove(filename)
         bot.delete_message(message.chat.id, msg.message_id)
     except Exception as e:
-        bot.edit_message_text(f"ئیشکال: یوتوب ڕێگریێ دکەت. ئەگەر ڤیدیۆیا Shorts بیت یان تەمەنێ وێ +١٨ بیت، سێرڤەر نەشێت دانلۆد بکەت.", message.chat.id, msg.message_id)
+        bot.edit_message_text(f"ئیشکال: فایلێ ڤێ لینکێ ناهێتە دانلۆدکرن. (دبیت ڤیدیۆ یا تایبەت/Private بیت).", message.chat.id, msg.message_id)
 
+# بەشێ کارپێکرنێ ل سەر Railway
 app = Flask('')
 @app.route('/')
 def home(): return "Bot is Online"
