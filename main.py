@@ -19,7 +19,7 @@ def check_sub(user_id):
 def start(message):
     user_id = message.from_user.id
     if check_sub(user_id):
-        bot.send_message(message.chat.id, "سڵاو كاك فەلاح! لینکا ڤیدیۆیێ بفرێکه (TikTok, Insta, FB, YouTube).")
+        bot.send_message(message.chat.id, "سڵاو كاك فەلاح! 🤖\nلینکا ڤیدیۆیێ بفرێکه (TikTok, Insta, FB, YouTube).\n\nتێبینی: ئەگەر یوتوب کار نەکرد، لینکا کورت (Shorts) تاقی بکە.")
     else:
         markup = types.InlineKeyboardMarkup()
         markup.add(types.InlineKeyboardButton("Join Channel", url=CHANNEL_URL))
@@ -33,17 +33,22 @@ def handle_download(message):
         return
     url = message.text
     if not url.startswith("http"): return
-    msg = bot.reply_to(message, "⏳ Tech AI خەریکی دانلۆدکردنە...")
+    msg = bot.reply_to(message, "⏳ Tech AI خەریکی دانلۆدکردنە...\nهەوڵ دەدەین بەربەستەکانی یوتوب ببڕین.")
     
-    # ڕێکخستنێن تایبەت بۆ دەربازبوون ژ بلۆکا یوتوب
     ydl_opts = {
-        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+        # بکارئینانا ڤێرژنا ئەندرۆید بۆ دەربازبوون ژ بلۆکا یوتوب
+        'format': 'best[ext=mp4]/best',
         'outtmpl': f'vid_{int(time.time())}.%(ext)s',
         'quiet': True,
         'no_warnings': True,
         'nocheckcertificate': True,
-        'source_address': '0.0.0.0', # چەسپاندنا IP
-        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+        'youtube_include_dash_manifest': False,
+        'extract_flat': False,
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+        }
     }
 
     try:
@@ -55,9 +60,14 @@ def handle_download(message):
         os.remove(filename)
         bot.delete_message(message.chat.id, msg.message_id)
     except Exception as e:
-        bot.edit_message_text(f"ئیشکال: یوتوب یان سێرڤەر ڕێگریێ دکەن. تاقی بکەڤە بۆ لینکا کورت (Shorts).", message.chat.id, msg.message_id)
+        error_msg = str(e)
+        if "Sign in to confirm your age" in error_msg:
+            bot.edit_message_text("ئیشکال: یوتوب داخوازا تەمەنی دەکەت، ئەڤ ڤیدیۆیە ناهێتە دانلۆدکرن.", message.chat.id, msg.message_id)
+        elif "The read operation timed out" in error_msg:
+            bot.edit_message_text("ئیشکال: سێرڤەر زۆر خاوە، دووبارە تاقی بکەوە.", message.chat.id, msg.message_id)
+        else:
+            bot.edit_message_text("ئیشکال: یوتوب ڕێگری ل سێرڤەری دەکەت. تکایە تەنێ ڤیدیۆ کورتەکان (Shorts) تاقی بکە.", message.chat.id, msg.message_id)
 
-# پێدڤییە بۆ Railway
 app = Flask('')
 @app.route('/')
 def home(): return "Bot is Online"
